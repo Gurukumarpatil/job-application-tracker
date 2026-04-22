@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Job Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="brand">
+            🚀 Job Tracker
+        </a>
+        <div class="user-menu">
+            <span>Welcome, <strong>{{ username }}</strong></span>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        
+        <!-- Analytics Dashboard -->
+        <div class="dashboard-header">
+            <div class="kpi-cards">
+                <div class="kpi-card">
+                    <h3>Total Applications</h3>
+                    <p id="totalAppsKpi">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Interview Rate</h3>
+                    <p id="interviewRateKpi">0%</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Offers Received</h3>
+                    <p id="offersKpi">0</p>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Add Application Form -->
+        <div class="card">
+            <h2>Add New Application</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="company">Company Name</label>
+                    <input id="company" type="text" placeholder="e.g. Google, Amazon">
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">Role / Position</label>
+                    <input id="role" type="text" placeholder="e.g. Software Engineer">
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status">
+                        <option value="Applied">Applied</option>
+                        <option value="Interview">Interview</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Offer">Offer</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="date">Date Applied</label>
+                    <input id="date" type="date">
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location (Optional)</label>
+                    <select id="location">
+                        <option value="">Select Location</option>
+                        <option value="Remote">Remote</option>
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="On-site">On-site</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="job_url">Job URL (Optional)</label>
+                    <input id="job_url" type="url" placeholder="https://...">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="notes">Notes / Interview Details (Optional)</label>
+                    <textarea id="notes" rows="3" placeholder="Interviewer names, tasks, feedback..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <!-- Empty label to align button -->
+                    <label>&nbsp;</label> 
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="submitBtn" onclick="submitForm()" class="btn-primary">Add Application</button>
+                        <button id="cancelBtn" onclick="cancelEdit()" class="btn-primary" style="background: var(--text-muted); display: none;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Application List -->
+        <div class="card applications-card">
+            <div class="applications-header">
+                <h2 style="margin: 0;">My Applications</h2>
+                
+                <div class="view-toggles">
+                    <button id="listViewBtn" class="btn-toggle active" onclick="switchView('list')">List View</button>
+                    <button id="boardViewBtn" class="btn-toggle" onclick="switchView('board')">Board View</button>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <select id="statusFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="All">All Status</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Interview">Interview</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Offer">Offer</option>
+                    </select>
+                    <input type="text" id="searchInput" placeholder="🔍 Search company..." style="width: 250px; padding: 0.5rem 1rem;">
+                </div>
+            </div>
+            <div id="listView" class="table-container view-section active">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>Location</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Kanban Board View -->
+            <div id="boardView" class="board-container view-section" style="display: none;">
+                <div class="board-column" id="col-applied" data-status="Applied" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+                    <h3>Applied <span class="count-badge">0</span></h3>
+                    <div class="column-cards"></div>
+                </div>
+                <div class="board-column" id="col-interview" data-status="Interview" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+                    <h3>Interview <span class="count-badge">0</span></h3>
+                    <div class="column-cards"></div>
+                </div>
+                <div class="board-column" id="col-offer" data-status="Offer" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+                    <h3>Offer <span class="count-badge">0</span></h3>
+                    <div class="column-cards"></div>
+                </div>
+                <div class="board-column" id="col-rejected" data-status="Rejected" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+                    <h3>Rejected <span class="count-badge">0</span></h3>
+                    <div class="column-cards"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
